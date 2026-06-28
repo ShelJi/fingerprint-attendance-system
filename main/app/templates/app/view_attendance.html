@@ -1,0 +1,175 @@
+{% extends 'app/base.html' %}
+
+{% block title %}Attendance History | Fingerprint Attendance System{% endblock %}
+
+{% block nav_view_attendance %}active{% endblock %}
+
+{% block content %}
+<div class="section-header">
+    <h1 class="section-title">Attendance History Logs</h1>
+    <p class="section-desc">All registered users and their attendance status. Filter by date range or search by name / fingerprint ID.</p>
+</div>
+
+<div class="glass-card">
+    <!-- Toolbar with filters and search -->
+    <div class="toolbar-container">
+        <!-- Date filters (filtered by days) -->
+        <div class="filter-btn-group">
+            <a href="?days=today{% if search_query %}&q={{ search_query }}{% endif %}" 
+               class="btn-filter {% if days_filter == 'today' or days_filter == '1' %}active{% endif %}">
+                <i data-lucide="calendar-days"></i>
+                <span>Today</span>
+            </a>
+            <a href="?days=7{% if search_query %}&q={{ search_query }}{% endif %}" 
+               class="btn-filter {% if days_filter == '7' %}active{% endif %}">
+                <i data-lucide="calendar-range"></i>
+                <span>Last 7 Days</span>
+            </a>
+            <a href="?days=30{% if search_query %}&q={{ search_query }}{% endif %}" 
+               class="btn-filter {% if days_filter == '30' %}active{% endif %}">
+                <i data-lucide="calendar-clock"></i>
+                <span>Last 30 Days</span>
+            </a>
+            <a href="?days=all{% if search_query %}&q={{ search_query }}{% endif %}" 
+               class="btn-filter {% if days_filter == 'all' %}active{% endif %}">
+                <i data-lucide="database"></i>
+                <span>All Time</span>
+            </a>
+        </div>
+
+        <!-- Search Bar -->
+        <form method="GET" action="" class="search-wrapper">
+            <!-- Keep the current days filter active when searching -->
+            <input type="hidden" name="days" value="{{ days_filter|default:'today' }}">
+            <i data-lucide="search" class="search-icon"></i>
+            <input type="text" name="q" class="search-input" placeholder="Search by name or ID..." value="{{ search_query|default:'' }}">
+        </form>
+    </div>
+
+    <!-- Attendance Data Table -->
+    <div class="table-responsive">
+        <table class="custom-table">
+            <thead>
+                <tr>
+                    <th>Employee Name</th>
+                    <th>Fingerprint ID</th>
+                    <th>Date</th>
+                    <th>Check In</th>
+                    <th>Check Out</th>
+                    <th>Duration</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in user_attendance_rows %}
+                    <tr>
+                        <!-- Employee Name -->
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <div class="profile-avatar" style="width: 32px; height: 32px; font-size: 0.8rem; border: none; background: rgba(99, 102, 241, 0.1); color: var(--color-accent);">
+                                    {{ row.user.first_name|default:row.user.username|slice:":1"|upper }}
+                                </div>
+                                <div>
+                                    <span style="font-weight: 600;">{{ row.user.get_full_name|default:row.user.username }}</span>
+                                    <span style="display: block; font-size: 0.75rem; color: var(--text-muted);">{{ row.user.email }}</span>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Fingerprint ID -->
+                        <td><code>#{{ row.user.fingerprint_data }}</code></td>
+
+                        <!-- Date -->
+                        <td>
+                            {% if row.attendance %}
+                                <span style="font-weight: 500; white-space: nowrap;">{{ row.attendance.timein|date:"d-m-Y" }}</span>
+                            {% else %}
+                                <span style="color: var(--text-muted); font-size: 0.85rem;">—</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Check In -->
+                        <td>
+                            {% if row.attendance %}
+                                <span style="font-weight: 500;">{{ row.attendance.timein|date:"H:i:s" }}</span>
+                            {% else %}
+                                <span style="color: var(--text-muted); font-size: 0.85rem;">—</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Check Out -->
+                        <td>
+                            {% if row.attendance and row.attendance.timeout %}
+                                <span>{{ row.attendance.timeout|date:"H:i:s" }}</span>
+                            {% else %}
+                                <span style="color: var(--text-muted); font-size: 0.85rem;">—</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Duration -->
+                        <td>
+                            {% if row.attendance and row.attendance.timeout %}
+                                <span id="duration-{{ row.attendance.id }}">Calculating...</span>
+                            {% else %}
+                                <span style="color: var(--text-muted); font-size: 0.85rem;">—</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Status -->
+                        <td>
+                            {% if row.status == 'completed' %}
+                                <span class="status-badge present">Completed</span>
+                            {% elif row.status == 'active' %}
+                                <span class="status-badge late">Active Session</span>
+                            {% elif row.status == 'not_checked_in' %}
+                                <span class="status-badge absent" style="background: rgba(100,116,139,0.15); color: #94a3b8;">Not Checked In</span>
+                            {% elif row.status == 'absent' %}
+                                <span class="status-badge absent" style="background: rgba(239,68,68,0.1); color: #f87171;">Absent</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 4rem 0;">
+                            <i data-lucide="inbox" style="width: 48px; height: 48px; margin-bottom: 0.75rem; opacity: 0.5;"></i>
+                            <p>No users found. <a href="{% url 'create_user' %}" style="color: var(--color-accent);">Create a user</a> to get started.</p>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Calculate durations dynamically
+    document.addEventListener("DOMContentLoaded", function() {
+        {% for row in user_attendance_rows %}
+            {% if row.attendance and row.attendance.timeout %}
+                (function() {
+                    const timein = new Date("{{ row.attendance.timein|date:'Y-m-d\TH:i:s' }}");
+                    const timeout = new Date("{{ row.attendance.timeout|date:'Y-m-d\TH:i:s' }}");
+                    const diffMs = timeout - timein;
+                    
+                    if (diffMs > 0) {
+                        const diffHrs = Math.floor(diffMs / 3600000);
+                        const diffMins = Math.floor((diffMs % 3600000) / 60000);
+                        let durationText = "";
+                        if (diffHrs > 0) {
+                            durationText += `${diffHrs}h `;
+                        }
+                        durationText += `${diffMins}m`;
+                        const elem = document.getElementById("duration-{{ row.attendance.id }}");
+                        if (elem) elem.textContent = durationText;
+                    } else {
+                        const elem = document.getElementById("duration-{{ row.attendance.id }}");
+                        if (elem) elem.textContent = "0m";
+                    }
+                })();
+            {% endif %}
+        {% endfor %}
+    });
+</script>
+{% endblock %}

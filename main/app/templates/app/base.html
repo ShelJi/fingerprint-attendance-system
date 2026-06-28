@@ -1,0 +1,153 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Fingerprint Attendance System{% endblock %}</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Custom Style Sheet -->
+    <link rel="stylesheet" href="{% static 'app/css/style.css' %}">
+</head>
+<body>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="app-sidebar" id="appSidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon">
+                    <i data-lucide="fingerprint"></i>
+                </div>
+                <span class="brand-name">FINGERPRINT SYS</span>
+            </div>
+
+            <ul class="sidebar-menu">
+                <li class="menu-category">Main Menu</li>
+                <li class="sidebar-item {% block nav_dashboard %}{% endblock %}">
+                    <a href="{% url 'home' %}" class="sidebar-link">
+                        <i data-lucide="layout-dashboard"></i>
+                        <span>Super Admin Dashboard</span>
+                    </a>
+                </li>
+
+                <li class="menu-category">User Management</li>
+                <li class="sidebar-item {% block nav_create_user %}{% endblock %}">
+                    <a href="{% url 'create_user' %}" class="sidebar-link">
+                        <i data-lucide="user-plus"></i>
+                        <span>Create User</span>
+                    </a>
+                </li>
+
+                <li class="menu-category">Logs & Reports</li>
+                <li class="sidebar-item {% block nav_view_attendance %}{% endblock %}">
+                    <a href="{% url 'view_attendance' %}" class="sidebar-link">
+                        <i data-lucide="calendar"></i>
+                        <span>View Attendance</span>
+                    </a>
+                </li>
+                <li class="sidebar-item {% block nav_record_attendance %}{% endblock %}">
+                    <a href="{% url 'record_attendance' %}" class="sidebar-link">
+                        <i data-lucide="clock"></i>
+                        <span>Record Attendance</span>
+                    </a>
+                </li>
+            </ul>
+
+            <!-- Sidebar Footer User Profile -->
+            <div class="sidebar-footer">
+                <div class="profile-card">
+                    {% if user.profile_image %}
+                        <img src="{{ user.profile_image.url }}" alt="Profile Image" class="profile-avatar">
+                    {% else %}
+                        <div class="profile-avatar">SA</div>
+                    {% endif %}
+                    <div class="profile-details">
+                        <div class="profile-name">{% if user.is_authenticated %}{{ user.username }}{% else %}Super Admin{% endif %}</div>
+                        <div class="profile-role">System Administrator</div>
+                    </div>
+                </div>
+                <button class="logout-btn" onclick="location.href='/admin/logout/'">
+                    <i data-lucide="log-out"></i>
+                    <span>Log Out</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <div class="main-wrapper">
+            <!-- Top Header -->
+            <header class="app-header">
+                <button class="menu-toggle" id="menuToggle" aria-label="Toggle Navigation">
+                    <i data-lucide="menu"></i>
+                </button>
+                <div class="device-status">
+                    <span class="status-dot online"></span>
+                    <span>Biometric Device: Online</span>
+                </div>
+                <div style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;">
+                    Server Time: <span id="current-time"></span>
+                </div>
+            </header>
+
+            <!-- Main Content Area -->
+            <main class="content-body">
+                <!-- Django Success/Error Messages -->
+                {% if messages %}
+                    <div class="messages-container">
+                        {% for message in messages %}
+                            <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-error{% endif %}">
+                                <i data-lucide="{% if message.tags == 'success' %}check-circle{% else %}alert-circle{% endif %}"></i>
+                                <span>{{ message }}</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                {% block content %}
+                {% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // Responsive Sidebar Toggle
+        const menuToggle = document.getElementById('menuToggle');
+        const appSidebar = document.getElementById('appSidebar');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+        if (menuToggle && appSidebar && sidebarOverlay) {
+            menuToggle.addEventListener('click', () => {
+                appSidebar.classList.toggle('active');
+                sidebarOverlay.classList.toggle('active');
+            });
+
+            sidebarOverlay.addEventListener('click', () => {
+                appSidebar.classList.remove('active');
+                sidebarOverlay.classList.remove('active');
+            });
+        }
+
+        // Live Clock in Header
+        function updateClock() {
+            const timeSpan = document.getElementById('current-time');
+            if (timeSpan) {
+                const now = new Date();
+                timeSpan.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            }
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+    </script>
+    {% block scripts %}
+    {% endblock %}
+</body>
+</html>
