@@ -30,6 +30,19 @@
             </select>
             <span style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">Select an employee to check their active state and record check-in/out timestamps.</span>
         </div>
+
+        <div style="margin-top: 1.25rem; padding: 1rem; border: 1px solid var(--border-color); border-radius: 10px; background: rgba(99, 102, 241, 0.04);">
+            <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 0.75rem;">Fingerprint Device Input</h4>
+            <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.75rem;">The biometric device can send a fingerprint ID to the backend endpoint below and the attendance record will be stored automatically.</p>
+            <form id="fingerprint-form" style="display: flex; flex-direction: column; gap: 0.6rem;">
+                <input type="number" id="fingerprint-input" class="form-input" placeholder="Enter fingerprint ID" min="1" required>
+                <button type="submit" class="btn-primary" style="justify-content: center; height: 44px;">
+                    <i data-lucide="scan-eye"></i>
+                    <span>Submit Fingerprint Scan</span>
+                </button>
+            </form>
+            <p id="fingerprint-status" style="margin-top: 0.75rem; font-size: 0.8rem; color: var(--text-muted);"></p>
+        </div>
     </div>
 
     <!-- Status & Operations Card (Right) -->
@@ -124,6 +137,43 @@
             window.location.href = `?user_id=${userId}`;
         } else {
             window.location.href = '?';
+        }
+    });
+
+    document.getElementById('fingerprint-form').addEventListener('submit', async function(event) {
+        event.preventDefault();
+        const input = document.getElementById('fingerprint-input');
+        const status = document.getElementById('fingerprint-status');
+        const fingerprintValue = input.value.trim();
+
+        if (!fingerprintValue) {
+            status.textContent = 'Please enter a fingerprint ID.';
+            status.style.color = 'var(--color-danger)';
+            return;
+        }
+
+        status.textContent = 'Sending fingerprint scan...';
+        status.style.color = 'var(--text-secondary)';
+
+        try {
+            const response = await fetch('{% url "fingerprint_scan" %}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ fingerprint_data: fingerprintValue })
+            });
+
+            const result = await response.json();
+            if (response.ok) {
+                status.textContent = result.message || 'Fingerprint scan saved.';
+                status.style.color = 'var(--color-success)';
+                input.value = '';
+            } else {
+                status.textContent = result.error || 'Fingerprint scan failed.';
+                status.style.color = 'var(--color-danger)';
+            }
+        } catch (error) {
+            status.textContent = 'Network error while sending fingerprint scan.';
+            status.style.color = 'var(--color-danger)';
         }
     });
 

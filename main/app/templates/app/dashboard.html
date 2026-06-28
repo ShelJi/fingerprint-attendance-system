@@ -72,6 +72,7 @@
                     <tr>
                         <th>User</th>
                         <th>Fingerprint ID</th>
+                        <th>Date</th>
                         <th>Time In</th>
                         <th>Time Out</th>
                         <th>Status</th>
@@ -92,10 +93,11 @@
                                 </div>
                             </td>
                             <td><code>#{{ attendance.user.fingerprint_data }}</code></td>
-                            <td><span style="white-space: nowrap;">{{ attendance.timein|date:"d-m-Y H:i:s" }}</span></td>
+                            <td><span style="white-space: nowrap;">{{ attendance.timein|date:"d-m-Y" }}</span></td>
+                            <td><span style="white-space: nowrap;">{{ attendance.timein|date:"H:i:s" }}</span></td>
                             <td>
                                 {% if attendance.timeout %}
-                                    <span style="white-space: nowrap;">{{ attendance.timeout|date:"d-m-Y H:i:s" }}</span>
+                                    <span style="white-space: nowrap;">{{ attendance.timeout|date:"H:i:s" }}</span>
                                 {% else %}
                                     <span style="color: var(--text-muted); font-size: 0.85rem;">—</span>
                                 {% endif %}
@@ -110,7 +112,7 @@
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 3rem 0;">
+                            <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 3rem 0;">
                                 <i data-lucide="clipboard-x" style="width: 48px; height: 48px; margin-bottom: 0.5rem; opacity: 0.5;"></i>
                                 <p>No logs registered for today yet.</p>
                             </td>

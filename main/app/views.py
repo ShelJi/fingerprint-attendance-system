@@ -1,9 +1,13 @@
+import json
+
+from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.utils import timezone
 from datetime import datetime, time, timedelta
 from app.models import User, Attendance
 from django.db.models import Q
+from django.views.decorators.csrf import csrf_exempt
 
 
 # ══════════════════════════════════════════════════════
@@ -209,6 +213,54 @@ def view_attendance(request):
 # Manual console for admins to record check-in / check-out
 # on behalf of an employee (e.g. if the scanner is offline).
 # ══════════════════════════════════════════════════════
+@csrf_exempt
+def fingerprint_scan(request):
+    if request.method not in ['GET', 'POST']:
+        return JsonResponse({'error': 'Only GET and POST requests are supported.'}, status=405)
+
+    if request.method == 'POST':
+        content_type = request.content_type or ''
+        if 'application/json' in content_type:
+            try:
+                payload = json.loads(request.body.decode('utf-8'))
+            except json.JSONDecodeError:
+                return JsonResponse({'error': 'Invalid JSON payload.'}, status=400)
+            fingerprint_value = payload.get('fingerprint_data') or payload.get('fingerprintId')
+        else:
+            fingerprint_value = request.POST.get('fingerprint_data') or request.POST.get('fingerprintId')
+    else:
+        fingerprint_value = request.GET.get('fingerprint_data') or request.GET.get('fingerprintId')
+
+    if fingerprint_value in (None, ''):
+        return JsonResponse({'error': 'fingerprint_data is required.'}, status=400)
+
+    try:
+        fingerprint_id = int(fingerprint_value)
+    except (TypeError, ValueError):
+        return JsonResponse({'error': 'fingerprint_data must be an integer.'}, status=400)
+
+    try:
+        user = User.objects.get(fingerprint_data=fingerprint_id)
+    except User.DoesNotExist:
+        return JsonResponse({'error': f'No user found for fingerprint ID {fingerprint_id}.'}, status=404)
+
+    already_active = Attendance.objects.filter(user=user, timeout__isnull=True).exists()
+    if already_active:
+        return JsonResponse({'message': 'User already checked in.', 'user': user.username, 'fingerprint_data': fingerprint_id}, status=200)
+
+    attendance = Attendance.objects.create(user=user)
+    return JsonResponse(
+        {
+            'message': 'Fingerprint scan recorded.',
+            'user': user.username,
+            'fingerprint_data': fingerprint_id,
+            'attendance_id': attendance.id,
+            'timein': attendance.timein.isoformat(),
+        },
+        status=201,
+    )
+
+
 def record_attendance(request):
 
     # Load all employees for the dropdown selector
